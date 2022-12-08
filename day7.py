@@ -46,7 +46,6 @@ def solve():
   filesystem = {
     "/": {}
   }
-  directory_sizes = defaultdict(int)
   current_directory: dict = filesystem
 
   commands = input.read().split("\n")
