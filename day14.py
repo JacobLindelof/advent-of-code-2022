@@ -8,7 +8,7 @@ def render_map(map, sand_location = None):
   for row in map_copy:
     print("".join(row))
 
-def parse_map(paths: list[str], min_x: int, max_x: int, min_y: int, max_y: int):
+def parse_map(paths: list[str], min_x: int, max_x: int, min_y: int, max_y: int, floor = False):
   map = [
     [
       "." for x in range(max_x - min_x + 1)
@@ -28,18 +28,22 @@ def parse_map(paths: list[str], min_x: int, max_x: int, min_y: int, max_y: int):
         map[a[1] + d][a[0]] = "#"
       
       map[b[1]][b[0]] = "#"
+  
+  if floor:
+    map.append(["." for x in range(max_x - min_x + 1)])
+    map.append(["#" for x in range(max_x - min_x + 1)])
   return map
 
 
-def drop_sand(rock_map: list[list[str]], sand_spawn: tuple):
-  max_y= len(rock_map)
-  max_x = len(rock_map[0])
-
+def drop_sand(rock_map: list[list[str]], sand_spawn: tuple, expand = False):
   sand_location = sand_spawn
   sand_stuck = False
   while not sand_stuck:
+    max_y= len(rock_map)
+    max_x = len(rock_map[0])
+
     if sand_location[1] == max_y:
-      return None
+      return None, rock_map, sand_spawn
     else: 
       down = (sand_location[0], sand_location[1] + 1)
       left = (sand_location[0] - 1, sand_location[1] + 1) if sand_location[0] > 0 else None
@@ -49,22 +53,34 @@ def drop_sand(rock_map: list[list[str]], sand_spawn: tuple):
         sand_location = (down[0], down[1])
 
       elif not left:
-        return None
+        if not expand:
+          return None, rock_map, sand_spawn
+        rock_map = [
+          ["."] + [x for x in y] for y in rock_map
+        ]
+        rock_map[-1][0] = "#"
+        sand_location = (sand_location[0] + 1, sand_location[1])
+        sand_spawn = (sand_spawn[0] + 1, sand_spawn[1])
+
       elif rock_map[left[1]][left[0]] == ".":
         sand_location = (left[0], left[1])
 
       elif not right:
-        return None
+        if not expand:
+          return None, rock_map, sand_spawn
+        rock_map = [
+          [x for x in y] + ["."] for y in rock_map
+        ]
+        rock_map[-1][-1] = "#"
+
       elif right and rock_map[right[1]][right[0]] == ".":
         sand_location = (right[0], right[1])
 
       else:
         sand_stuck = True
   
-  return sand_location
+  return sand_location, rock_map, sand_spawn
       
-
-
 
 def solve():
   input = open("inputs/day14.txt", "r").read()
@@ -76,22 +92,36 @@ def solve():
   paths = input.split("\n")
   rock_map = parse_map(paths, min_x, max_x, min_y, max_y)
   sand_spawn = (500 - min_x, 0)
-
   
   total_sand = 1
-  sand_location = drop_sand(rock_map, sand_spawn)
+  sand_location, rock_map, sand_spawn  = drop_sand(rock_map, sand_spawn)
   rock_map[sand_location[1]][sand_location[0]] = "O"
 
   while sand_location:
-    sand_location = drop_sand(rock_map, sand_spawn)
+    sand_location, rock_map, sand_spawn = drop_sand(rock_map, sand_spawn)
     if sand_location:
       total_sand += 1
       rock_map[sand_location[1]][sand_location[0]] = "O"
 
   print(f"Total Sand Blocks: {total_sand}")
 
-  render_map(rock_map)
+  rock_map_with_floor = parse_map(paths, min_x, max_x, min_y, max_y, True)
+  sand_spawn = (500 - min_x, 0)
+  
+  total_sand = 1
+  sand_location, rock_map_with_floor, sand_spawn = drop_sand(rock_map_with_floor, sand_spawn, expand=True)
+  rock_map_with_floor[sand_location[1]][sand_location[0]] = "O"
 
+  while sand_location:
+    sand_location, rock_map_with_floor, sand_spawn = drop_sand(rock_map_with_floor, sand_spawn, expand=True)
+    if sand_location:
+      total_sand += 1
+      rock_map_with_floor[sand_location[1]][sand_location[0]] = "O"
+      if sand_location == sand_spawn:
+        break
+
+  render_map(rock_map_with_floor)
+  print(f"Total Sand Blocks: {total_sand}")
 
 
 if __name__ == "__main__":
